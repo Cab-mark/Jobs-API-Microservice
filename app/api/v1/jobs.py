@@ -76,3 +76,17 @@ def create_job(job: JobPost):
     
     # Return the created job object
     return new_job
+
+# --- 6. get single job Endpoint ---
+@router.get("/jobs/{job_id}", response_model=Job)
+def get_job_by_id(job_id: str):
+    """
+    Retrieves a single job based on its unique job_id.
+    """
+    # Loop through the list to find the job with the matching ID
+    for job in jobs_data:
+        if job.job_id == job_id:
+            return job
+    
+    # If the loop finishes without finding a match, raise a 404 exception
+    raise HTTPException(status_code=404, detail=f"Job with ID '{job_id}' not found")
