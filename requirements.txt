@@ -7,3 +7,4 @@ alembic
 jobs-data-contracts>=1.2.1,<2.0.0
 email-validator
 httpx
+pytest
