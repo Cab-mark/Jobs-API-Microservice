@@ -14,7 +14,7 @@ from app.models import Base, JobModel
 SEED_JOBS = [
     {
         "external_id": "seed-001",
-        "approach": "external",
+        "approach": "External",
         "title": "Policy Advisor",
         "description": "This is a fantastic job for a policy advisor...",
         "organisation": "Ministry of Defence",
@@ -26,15 +26,15 @@ SEED_JOBS = [
                 "longitude": -2.5879,
             }
         ],
-        "grade": "grade_7",
-        "assignment_type": "permanent",
-        "work_location": ["office_based"],
-        "working_pattern": ["full_time"],
+        "grade": "Grade 7",
+        "assignment_type": "Permanent",
+        "work_location": ["Office based"],
+        "working_pattern": ["Full-time"],
         "personal_spec": "Some personal specification text",
         "apply_detail": "Apply via careers portal",
         "date_posted": datetime.now(timezone.utc),
         "closing_date": datetime.now(timezone.utc) + timedelta(days=30),
-        "profession": "policy",
+        "profession": "Policy",
         "recruitment_email": "recruitment@civilservice.gov.uk",
     },
 ]
