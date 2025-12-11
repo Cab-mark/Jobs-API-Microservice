@@ -179,7 +179,7 @@ def get_job_by_external_id(external_id: str, db: Session = Depends(get_db)):
 
 @router.put("/jobs/{external_id}", response_model=JobResponse)
 async def replace_job(external_id: str, job_payload: JobCreatePayload, db: Session = Depends(get_db)):
-    if job_payload.external_id and job_payload.external_id != external_id:
+    if job_payload.external_id != external_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="externalId in body must match path parameter",
@@ -191,6 +191,8 @@ async def replace_job(external_id: str, job_payload: JobCreatePayload, db: Sessi
 
     normalized = _normalize_payload(job_payload)
     for key, value in normalized.items():
+        if key == "id":
+            continue
         setattr(job, key, value)
 
     db.commit()
@@ -219,6 +221,8 @@ async def update_job(
     updates = _normalize_payload(job_payload, exclude_unset=True)
     if updates:
         for key, value in updates.items():
+            if key == "id":
+                continue
             setattr(job, key, value)
         db.commit()
         db.refresh(job)

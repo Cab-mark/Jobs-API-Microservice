@@ -96,7 +96,7 @@ paths:
       summary: Replace an existing job identified by externalId
       operationId: replaceJobByExternalId
       requestBody:
-        description: Full job payload to replace an existing job. The resource to replace is identified by the path parameter externalId. externalId in the body, if provided, MUST match the path param[...]
+        description: Full job payload to replace an existing job. The resource to replace is identified by the path parameter externalId. externalId in the body, if provided, MUST match the path parameter.
         required: true
         content:
           application/json:
