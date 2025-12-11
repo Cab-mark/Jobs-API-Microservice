@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import Field
 from sqlalchemy.orm import Session
 
@@ -16,14 +16,14 @@ class JobCreatePayload(dc_models.JobCreate):
     """Extend jobs-data-contracts JobCreate to include datePosted per OpenAPI."""
 
     date_posted: dc_models.AwareDatetime = Field(..., alias="datePosted")
-    model_config = dc_models.ConfigDict(populate_by_name=True)
+    model_config = dc_models.ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class JobUpdatePayload(dc_models.JobUpdate):
     """Patch payload including optional datePosted."""
 
     date_posted: dc_models.AwareDatetime | None = Field(None, alias="datePosted")
-    model_config = dc_models.ConfigDict(populate_by_name=True)
+    model_config = dc_models.ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class JobResponse(dc_models.Job):
@@ -153,7 +153,7 @@ def get_all_jobs(db: Session = Depends(get_db)):
 
 
 @router.post("/jobs", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
-async def create_job(job_payload: JobCreatePayload, response: Response, db: Session = Depends(get_db)):
+def create_job(job_payload: JobCreatePayload, response: Response, db: Session = Depends(get_db)):
     existing = db.query(JobModel).filter(JobModel.external_id == job_payload.external_id).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Job with externalId already exists")
@@ -178,7 +178,7 @@ def get_job_by_external_id(external_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/jobs/{external_id}", response_model=JobResponse)
-async def replace_job(external_id: str, job_payload: JobCreatePayload, db: Session = Depends(get_db)):
+def replace_job(external_id: str, job_payload: JobCreatePayload, db: Session = Depends(get_db)):
     if job_payload.external_id != external_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -201,24 +201,21 @@ async def replace_job(external_id: str, job_payload: JobCreatePayload, db: Sessi
 
 
 @router.patch("/jobs/{external_id}", response_model=JobResponse)
-async def update_job(
+def update_job(
     external_id: str,
     job_payload: JobUpdatePayload,
-    request: Request,
     db: Session = Depends(get_db),
 ):
-    raw_body = await request.json()
-    if "externalId" in raw_body or "external_id" in raw_body:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="externalId cannot be updated via PATCH",
-        )
-
     job = db.query(JobModel).filter(JobModel.external_id == external_id).first()
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job with externalId '{external_id}' not found")
 
     updates = _normalize_payload(job_payload, exclude_unset=True)
+    if "external_id" in updates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="externalId cannot be modified via PATCH",
+        )
     if updates:
         for key, value in updates.items():
             if key == "id":
