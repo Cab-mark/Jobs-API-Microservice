@@ -25,6 +25,7 @@ class JobModel(Base):
     __table_args__ = (UniqueConstraint("external_id", name="uq_jobs_external_id"),)
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    version = Column(Integer, nullable=False, default=1)
     external_id = Column(String, nullable=False, index=True)
     approach = Column(String, nullable=False)
     title = Column(String, nullable=False)

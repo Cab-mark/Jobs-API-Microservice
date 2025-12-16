@@ -30,6 +30,14 @@ class JobResponse(dc_models.Job):
     """Job response including datePosted."""
 
     date_posted: dc_models.AwareDatetime = Field(..., alias="datePosted")
+    version: int
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class JobSummaryResponse(dc_models.JobSummary):
+    """Job summary response including version."""
+
+    version: int
     model_config = ConfigDict(populate_by_name=True)
 
 
@@ -58,6 +66,7 @@ FIELD_MAP = {
     "complaintsInfo": "complaints_info",
     "workingForTheCivilService": "working_for_the_civil_service",
     "eligibilityCheck": "eligibility_check",
+    "dateClosing": "closing_date",
     "datePosted": "date_posted",
 }
 
@@ -97,6 +106,7 @@ def _ensure_tz(value: datetime | None) -> datetime | None:
 def _job_model_to_response(job_model: JobModel) -> JobResponse:
     payload = {
         "id": job_model.id,
+        "version": job_model.version,
         "external_id": job_model.external_id,
         "approach": job_model.approach,
         "title": job_model.title,
@@ -110,7 +120,7 @@ def _job_model_to_response(job_model: JobModel) -> JobResponse:
         "personal_spec": job_model.personal_spec,
         "apply_detail": job_model.apply_detail,
         "date_posted": _ensure_tz(job_model.date_posted),
-        "closing_date": _ensure_tz(job_model.closing_date),
+        "date_closing": _ensure_tz(job_model.closing_date),
         "profession": job_model.profession,
         "recruitment_email": job_model.recruitment_email,
         "contacts": job_model.contacts,
@@ -136,19 +146,20 @@ def _job_model_to_response(job_model: JobModel) -> JobResponse:
     return JobResponse.model_validate(payload)
 
 
-@router.get("/jobs", response_model=List[dc_models.JobSummary])
+@router.get("/jobs", response_model=List[JobSummaryResponse])
 def get_all_jobs(db: Session = Depends(get_db)):
     jobs = db.query(JobModel).all()
     summaries = []
     for job in jobs:
         summary = {
             "id": job.id,
+            "version": job.version,
             "externalId": job.external_id,
             "title": job.title,
             "approach": job.approach,
-            "closingDate": _ensure_tz(job.closing_date),
+            "dateClosing": _ensure_tz(job.closing_date),
         }
-        summaries.append(dc_models.JobSummary.model_validate(summary))
+        summaries.append(JobSummaryResponse.model_validate(summary))
     return summaries
 
 
@@ -195,6 +206,7 @@ def replace_job(external_id: str, job_payload: JobCreatePayload, db: Session = D
             continue
         setattr(job, key, value)
 
+    job.version = (job.version or 0) + 1
     db.commit()
     db.refresh(job)
     return _job_model_to_response(job)
@@ -221,6 +233,7 @@ def update_job(
             if key == "id":
                 continue
             setattr(job, key, value)
+        job.version = (job.version or 0) + 1
         db.commit()
         db.refresh(job)
 
