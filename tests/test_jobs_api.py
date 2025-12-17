@@ -75,8 +75,10 @@ def setup_database():
 def stub_queue_publisher(monkeypatch):
     stub = StubQueuePublisher()
     app.dependency_overrides[get_queue_publisher] = lambda: stub
-    monkeypatch.setenv("QUEUE_MESSAGE_VERSION", "1")
+    message_version = "5"
+    monkeypatch.setenv("QUEUE_MESSAGE_VERSION", message_version)
     monkeypatch.delenv("QUEUE_API_ENDPOINT", raising=False)
+    stub.message_version = int(message_version)
     yield stub
     app.dependency_overrides.pop(get_queue_publisher, None)
 
@@ -146,7 +148,7 @@ def test_patch_rejects_external_id_and_updates_fields(stub_queue_publisher):
     assert patched["version"] == 2
     assert len(stub_queue_publisher.messages) == 2
     assert stub_queue_publisher.messages[-1]["operation"] == Operation.UPDATE.value
-    assert stub_queue_publisher.messages[-1]["version"] == 1
+    assert stub_queue_publisher.messages[-1]["version"] == stub_queue_publisher.message_version
 
 
 def test_put_increments_version(stub_queue_publisher):
