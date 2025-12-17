@@ -8,3 +8,4 @@ jobs-data-contracts>=1.2.2
 email-validator
 httpx
 pytest
+boto3==1.35.97

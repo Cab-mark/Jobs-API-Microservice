@@ -29,11 +29,19 @@ services:
     environment:
       # Database connection for local Docker environment
       DATABASE_URL: postgresql://jobsapi:jobsapi@postgres:5432/jobsdb
+      AWS_REGION: ${AWS_REGION:-eu-west-2}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+      SQS_QUEUE_NAME: ${SQS_QUEUE_NAME:-jobs-api-queue}
+      SQS_ENDPOINT_URL: ${SQS_ENDPOINT_URL:-http://localstack:4566}
+      QUEUE_API_ENDPOINT: ${QUEUE_API_ENDPOINT:-http://localhost:8000}
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
+      localstack:
+        condition: service_started
     volumes:
       # Mount source code for development (optional - remove for production-like setup)
       - ./app:/app/app
@@ -45,7 +53,26 @@ services:
       retries: 5
       start_period: 20s
 
+  localstack:
+    image: localstack/localstack:3
+    container_name: jobs-api-localstack
+    environment:
+      - SERVICES=sqs
+      - DEBUG=0
+      - AWS_DEFAULT_REGION=${AWS_REGION:-eu-west-2}
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal sqs list-queues || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
 # Named volume for PostgreSQL data persistence
 volumes:
   postgres_data:
+    driver: local
+  localstack_data:
     driver: local

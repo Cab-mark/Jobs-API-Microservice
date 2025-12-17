@@ -242,6 +242,15 @@ curl -s -X POST "http://127.0.0.1:8000/jobs" \
 curl -s "http://127.0.0.1:8000/jobs/<externalId>" | jq
 ```
 
+## Queue publishing (SQS)
+
+- The API emits a message to SQS whenever a job is created (POST), replaced (PUT), or updated (PATCH).
+- Configure the queue with environment variables:
+  - `SQS_QUEUE_URL` (preferred for deployed environments) or `SQS_QUEUE_NAME` + `SQS_ENDPOINT_URL` for local auto-creation.
+  - `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+  - Optional: `QUEUE_API_ENDPOINT` (base URL to include in messages), `QUEUE_MESSAGE_VERSION` (defaults to 1).
+- `docker-compose` includes a LocalStack SQS service. With the defaults (`SQS_QUEUE_NAME=jobs-api-queue`, `SQS_ENDPOINT_URL=http://localstack:4566`), the queue is created automatically on first use.
+
 ## Development
 
 ### Docker Development Workflow

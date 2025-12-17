@@ -10,6 +10,7 @@ from jobs_data_contracts.jobs import models as dc_models
 
 from app.database import get_db
 from app.models import JobModel
+from app.queue import Operation, QueuePublisher, get_queue_publisher
 
 
 class JobCreatePayload(dc_models.JobCreate):
@@ -163,7 +164,12 @@ def get_all_jobs(db: Session = Depends(get_db)):
 
 
 @router.post("/jobs", response_model=JobResponse, status_code=status.HTTP_201_CREATED)
-def create_job(job_payload: JobCreatePayload, response: Response, db: Session = Depends(get_db)):
+def create_job(
+    job_payload: JobCreatePayload,
+    response: Response,
+    db: Session = Depends(get_db),
+    queue_publisher: QueuePublisher = Depends(get_queue_publisher),
+):
     existing = db.query(JobModel).filter(JobModel.external_id == job_payload.external_id).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Job with externalId already exists")
@@ -176,6 +182,7 @@ def create_job(job_payload: JobCreatePayload, response: Response, db: Session = 
     db.refresh(new_job)
 
     response.headers["Location"] = f"/jobs/{new_job.external_id}"
+    queue_publisher.send_job_message(new_job, Operation.CREATE)
     return _job_model_to_response(new_job)
 
 
@@ -188,7 +195,12 @@ def get_job_by_external_id(external_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/jobs/{external_id}", response_model=JobResponse)
-def replace_job(external_id: str, job_payload: JobCreatePayload, db: Session = Depends(get_db)):
+def replace_job(
+    external_id: str,
+    job_payload: JobCreatePayload,
+    db: Session = Depends(get_db),
+    queue_publisher: QueuePublisher = Depends(get_queue_publisher),
+):
     if job_payload.external_id != external_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -208,6 +220,7 @@ def replace_job(external_id: str, job_payload: JobCreatePayload, db: Session = D
     job.version += 1
     db.commit()
     db.refresh(job)
+    queue_publisher.send_job_message(job, Operation.REPLACE)
     return _job_model_to_response(job)
 
 
@@ -216,6 +229,7 @@ def update_job(
     external_id: str,
     job_payload: JobUpdatePayload,
     db: Session = Depends(get_db),
+    queue_publisher: QueuePublisher = Depends(get_queue_publisher),
 ):
     job = db.query(JobModel).filter(JobModel.external_id == external_id).first()
     if job is None:
@@ -235,5 +249,6 @@ def update_job(
         job.version += 1
         db.commit()
         db.refresh(job)
+        queue_publisher.send_job_message(job, Operation.UPDATE)
 
     return _job_model_to_response(job)
